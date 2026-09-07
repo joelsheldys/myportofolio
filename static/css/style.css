@@ -176,6 +176,43 @@ h1, .brand {
     border-top: 1px solid var(--line);
 }
 
+.skills {
+    padding: 4rem 0;
+    border-top: 1px solid var(--line);
+}
+
+.section-title {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 2rem;
+    margin-bottom: 2rem;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+.skill-card {
+    padding: 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+}
+
+.skill-card:hover {
+    border-color: var(--accent);
+}
+
+.skill-card h3 {
+    font-family: "Space Grotesk", sans-serif;
+    margin-bottom: 0.5rem;
+}
+
+.skill-card p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
 @media (max-width: 600px) {
     .hero-grid {
         grid-template-columns: 1fr;
