@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from main.models import Experience
+from main.models import Experience, Academic
 
 
 class MainTest(TestCase):
@@ -56,3 +56,41 @@ class MainTest(TestCase):
         self.assertFalse(self.experience.is_ongoing)
         self.assertContains(response, "Selesai")
         self.assertNotContains(response, "Sedang berlangsung")
+
+class AcademicsTest(TestCase):
+    def setUp(self):
+        self.academic = Academic.objects.create(
+            institution="Universitas Indonesia",
+            level="kuliah",
+            start_year=2025,
+        )
+
+    def test_academics_url_is_accessible(self):
+        response = self.client.get(reverse("main:show_academics"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "academics.html")
+
+    def test_academics_page_shows_data(self):
+        response = self.client.get(reverse("main:show_academics"))
+        self.assertContains(response, self.academic.institution)
+        self.assertContains(response, "Perguruan Tinggi")
+        self.assertContains(response, "2025 - Sekarang")
+
+    def test_empty_academics_page(self):
+        Academic.objects.all().delete()
+        response = self.client.get(reverse("main:show_academics"))
+        self.assertContains(response, "Belum ada riwayat akademik yang ditambahkan.")
+
+    def test_academic_model(self):
+        self.assertEqual(str(self.academic), "Universitas Indonesia")
+        self.assertTrue(self.academic.is_ongoing)
+
+    def test_completed_academic_period(self):
+        self.academic.end_year = 2029
+        self.academic.save()
+        self.assertFalse(self.academic.is_ongoing)
+        self.assertEqual(self.academic.period, "2025 - 2029")
+
+    def test_navbar_has_academics_link(self):
+        response = self.client.get(reverse("main:show_main"))
+        self.assertContains(response, f'href="{reverse("main:show_academics")}"')

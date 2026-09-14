@@ -24,3 +24,33 @@ class Experience(models.Model):
     @property
     def is_ongoing(self):
         return self.ended_at is None
+
+class Academic(models.Model):
+    LEVEL_CHOICES = [
+        ('sd', 'Sekolah Dasar'),
+        ('smp', 'Sekolah Menengah Pertama'),
+        ('sma', 'Sekolah Menengah Atas'),
+        ('kuliah', 'Perguruan Tinggi'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    institution = models.CharField(max_length=255)
+    level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='sd')
+    start_year = models.PositiveIntegerField()
+    end_year = models.PositiveIntegerField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['start_year']
+
+    def __str__(self):
+        return self.institution
+
+    @property
+    def is_ongoing(self):
+        return self.end_year is None
+
+    @property
+    def period(self):
+        if self.is_ongoing:
+            return f"{self.start_year} - Sekarang"
+        return f"{self.start_year} - {self.end_year}"
