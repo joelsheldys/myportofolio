@@ -33,12 +33,6 @@ def show_academics(request):
     }
     return render(request, "academics.html", context)
 
-def create_academic(request):
-    if request.method == "POST":
-        # Handle form submission
-        pass
-    return render(request, "academics_form.html", {"name": "Joel Sheldy Sucipto"})
-
 def show_projects(request):
     json_response = get_projects_json(request)
 
