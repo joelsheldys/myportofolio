@@ -27,9 +27,16 @@ def show_experience(request):
     return render(request, "experience.html", context)
 
 def show_academics(request):
+    json_response = get_academics_json(request)
+    academics = serializers.deserialize(
+        "json",
+        json_response.content.decode("utf-8"),
+    )
+    academics = [academic.object for academic in academics]
+
     context = {
         "name": "Joel Sheldy Sucipto",
-        "academic_list": Academic.objects.all(),
+        "academic_list": academics,
     }
     return render(request, "academics.html", context)
 
@@ -83,3 +90,53 @@ def delete_project(request, project_id):
         return redirect("main:show_projects")
 
     return redirect("main:show_projects")
+
+def get_academics_json(request):
+    academics = Academic.objects.all()
+    academics_json = serializers.serialize("json", academics)
+    return HttpResponse(academics_json, content_type="application/json")
+
+
+def create_academic(request):
+    form = AcademicForm(request.POST or None)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Riwayat akademik berhasil ditambahkan!")
+        return redirect("main:show_academics")
+
+    context = {
+        "name": "Joel Sheldy Sucipto",
+        "form": form,
+        "is_edit": False,
+    }
+    return render(request, "academics_form.html", context)
+
+
+def update_academic(request, academic_id):
+    academic = get_object_or_404(Academic, pk=academic_id)
+    form = AcademicForm(request.POST or None, instance=academic)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Riwayat akademik berhasil diperbarui!")
+        return redirect("main:show_academics")
+
+    context = {
+        "name": "Joel Sheldy Sucipto",
+        "form": form,
+        "is_edit": True,
+        "academic": academic,
+    }
+    return render(request, "academics_form.html", context)
+
+
+def delete_academic(request, academic_id):
+    academic = get_object_or_404(Academic, pk=academic_id)
+
+    if request.method == "POST":
+        academic.delete()
+        messages.success(request, "Riwayat akademik berhasil dihapus!")
+        return redirect("main:show_academics")
+
+    return redirect("main:show_academics")
