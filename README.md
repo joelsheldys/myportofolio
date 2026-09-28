@@ -32,3 +32,18 @@ Pengerjaan Tugas Individu 2 ini menggunakan AI berupa ChatGPT untuk mengetahui l
 Deklarasi AI
 
 Pengerjaan Tugas Individu 3 ini menggunakan AI berupa Claude untuk mengidentifikasi error code
+
+### Tugas 4
+
+Fitur Tambahan 
+- Peran: Pengunjung, User biasa, Editor (grup Django `Editor`), Pemilik (superuser)
+- Cek hak akses di server (`main/permissions.py`, decorator `role_required`) alurnya: anonim -> redirect login, tidak berhak -> HTTP 403
+- Tombol Tambah/Edit/Hapus disembunyikan lewat context processor `main.context_processors.roles`
+- Star untuk Academics dan Projects (`ManyToManyField` ke `User`, `toggle_star` via POST + CSRF)
+- Endpoint JSON memakai whitelist `fields` agar data user tidak bocor
+
+
+Deklarasi AI
+- Tools: Claude dan ChatGPT
+- Cara prompting: memasukkan screenshot halaman error dan traceback, menanyakan asal error
+- Bagian yang dibantu AI: checking error
