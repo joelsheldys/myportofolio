@@ -9,6 +9,14 @@
             <p class="section-kicker">Karya yang saya bangun</p>
             <h1>Projects</h1>
 
+            {% if user.is_superuser %}
+                <a href="{% url 'main:create_project' %}"
+                    class="button project-add-button">
+                    <span aria-hidden="true">+</span>
+                    Tambah Proyek
+                </a>
+            {% endif %}
+
                 <div class="experience-grid">
                     {% for project in project_list %}
                         <article class="experience-card">
@@ -21,16 +29,13 @@
                                     <a href="{{ project.project_url }}">Lihat proyek</a>
                                 </p>
                             {% endif %}
+
+                            {% include "components/project_star.html" with project=project %}
+                            
                             {% if user.is_superuser %}  
-                                <a href="{% url 'main:create_project' %}"
-                                    class="button project-add-button">
-                                    <span aria-hidden="true">+</span>
-                                    Tambah Proyek
-                                </a>
-                                {% if user.is_superuser %}  
-                                    {% include "components/project_delete_modal.html" with project=project %}
-                                {% endif %}                 
+                                 {% include "components/project_delete_modal.html" with project=project %}
                             {% endif %}                 
+                                           
                         </article>
                     {% empty %}
                         <p class="empty-state">
