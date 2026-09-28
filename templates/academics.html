@@ -8,23 +8,32 @@
         <div class="container">
             <p class="section-kicker">Riwayat pendidikan saya</p>
             <h1>Academics</h1>
+            {% if can_manage %}
             <a href="{% url 'main:create_academic' %}" class="button">Tambah Riwayat</a>
-
+            {% endif %}
             <div class="academics-timeline">
                 {% for academic in academic_list %}
                     <article class="academic-item">
                         <span class="academic-level">{{ academic.get_level_display }}</span>
                         <h2>{{ academic.institution }}</h2>
                         <p class="academic-period">{{ academic.period }}</p>
+
+                        {% url 'main:toggle_academic_star' academic.id as star_url %}
+                        {% include "components/star_button.html" with obj=academic star_url=star_url %}
+
+                        {% if can_edit %}
                         <div class="project-actions">
                             <a href="{% url 'main:update_academic' academic.id %}" class="button button-secondary">Edit</a>
+                            {% if can_manage %}
                             <form method="post"
                                   action="{% url 'main:delete_academic' academic.id %}"
                                   onsubmit="return confirm('Hapus riwayat {{ academic.institution }}?');">
                                 {% csrf_token %}
                                 <button type="submit" class="button button-danger">Hapus</button>
                             </form>
+                            {% endif %}
                         </div>
+                        {% endif %}
                     </article>
                 {% empty %}
                     <p class="empty-state">

@@ -40,6 +40,9 @@ class Academic(models.Model):
     level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='sd')
     start_year = models.PositiveIntegerField()
     end_year = models.PositiveIntegerField(blank=True, null=True)
+    starred_by = models.ManyToManyField(
+        User, related_name="starred_academics", blank=True
+    )
 
     class Meta:
         ordering = ['start_year']

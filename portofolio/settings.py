@@ -71,6 +71,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'main.context_processors.roles',
             ],
         },
     },
@@ -155,3 +156,4 @@ MAILERS = {
 }
 
 CSRF_TRUSTED_ORIGINS = ["https://joel-sheldy-myportofolio.pws.cs.ui.ac.id"]
+LOGIN_URL = "main:login"
