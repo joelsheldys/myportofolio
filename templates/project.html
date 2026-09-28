@@ -21,6 +21,16 @@
                                     <a href="{{ project.project_url }}">Lihat proyek</a>
                                 </p>
                             {% endif %}
+                            {% if user.is_superuser %}  
+                                <a href="{% url 'main:create_project' %}"
+                                    class="button project-add-button">
+                                    <span aria-hidden="true">+</span>
+                                    Tambah Proyek
+                                </a>
+                                {% if user.is_superuser %}  
+                                    {% include "components/project_delete_modal.html" with project=project %}
+                                {% endif %}                 
+                            {% endif %}                 
                         </article>
                     {% empty %}
                         <p class="empty-state">

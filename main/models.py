@@ -1,4 +1,6 @@
 import uuid
+
+from django.contrib.auth.models import User  # Tambahkan baris ini
 from django.db import models
 
 class Experience(models.Model):
@@ -56,6 +58,12 @@ class Academic(models.Model):
         return f"{self.start_year} - {self.end_year}"
     
 class Project(models.Model):
+    project_image_url = models.URLField(blank=True, max_length=500)
+    # Tambahkan field berikut: satu proyek bisa di-star banyak pengguna,
+    # dan satu pengguna bisa mem-star banyak proyek
+    starred_by = models.ManyToManyField(
+        User, related_name="starred_projects", blank=True
+    )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
     description = models.TextField()
