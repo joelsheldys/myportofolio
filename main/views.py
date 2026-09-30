@@ -3,7 +3,7 @@ import datetime
 from django.contrib import messages
 from django.core import serializers
 from django.db.models.aggregates import Count
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.shortcuts import get_object_or_404, redirect, render
@@ -55,29 +55,46 @@ def show_academics(request):
 
     return render(request, "academics.html", context)
 
+
 def show_projects(request):
     title_query = request.GET.get("title", "").strip()
-    projects = Project.objects.annotate(star_count=Count("starred_by")).order_by("title")
-    if title_query:
-        projects = projects.filter(title__icontains=title_query)
+
     context = {
         "name": OWNER_NAME,
-        "project_list": projects,
         "title_query": title_query,
-        "starred_ids": _starred_ids(request.user, "starred_projects"),
+        "form": ProjectForm(),
     }
     return render(request, "project.html", context)
 
 def get_projects_json(request):
     title_query = request.GET.get("title", "").strip()
-    projects = Project.objects.all()
+    projects = Project.objects.prefetch_related('starred_by').all()
 
     if title_query:
         projects = projects.filter(title__icontains=title_query)
 
-    projects_json = serializers.serialize("json", projects, fields=PROJECT_JSON_FIELDS, use_natural_foreign_keys=True)
-    return HttpResponse(projects_json, content_type="application/json")
+    # Konstruksi data JSON secara manual agar bisa menyisipkan logika Star
+    data = []
+    for project in projects:
+        starred_users = project.starred_by.all()
+        is_starred = request.user in starred_users if request.user.is_authenticated else False
+        starred_by_names = ", ".join([u.username for u in starred_users])
 
+        data.append({
+            "pk": str(project.id),
+            "fields": {
+                "title": project.title,
+                "description": project.description,
+                "tech_stack": project.tech_stack,
+                "project_url": project.project_url,
+                "project_image_url": project.project_image_url,
+                "star_count": starred_users.count(),
+                "is_starred": is_starred,
+                "starred_by_names": starred_by_names,
+            }
+        })
+
+    return JsonResponse(data, safe=False)
 
 def get_academics_json(request):
     academics = Academic.objects.all()
@@ -164,6 +181,24 @@ def logout_user(request):
     response = redirect("main:show_main")
     response.delete_cookie('last_login')
     return response
+
+@require_POST
+def create_project_ajax(request):
+    if not request.user.is_superuser:
+        return JsonResponse(
+            {"message": "Hanya pemilik portofolio yang dapat menambahkan proyek."},
+            status=403,
+        )
+
+    form = ProjectForm(request.POST)
+    if form.is_valid():
+        project = form.save()
+        return JsonResponse(
+            {"message": "Proyek berhasil ditambahkan.", "pk": str(project.id)},
+            status=201,
+        )
+
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 @login_required(login_url="/login/")
 @require_POST
