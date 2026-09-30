@@ -61,7 +61,6 @@ class Academic(models.Model):
         return f"{self.start_year} - {self.end_year}"
     
 class Project(models.Model):
-    project_image_url = models.URLField(blank=True, max_length=500)
     # Tambahkan field berikut: satu proyek bisa di-star banyak pengguna,
     # dan satu pengguna bisa mem-star banyak proyek
     starred_by = models.ManyToManyField(
