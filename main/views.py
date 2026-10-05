@@ -1,9 +1,8 @@
 import datetime
 
 from django.contrib import messages
-from django.core import serializers
 from django.db.models.aggregates import Count
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.shortcuts import get_object_or_404, redirect, render
@@ -43,14 +42,10 @@ def show_experience(request):
     return render(request, "experience.html", context)
 
 def show_academics(request):
-    academics = Academic.objects.annotate(
-        star_count=Count("starred_by")
-    ).order_by("start_year")
-
     context = {
         "name": OWNER_NAME,
-        "academic_list": academics,
-        "starred_ids": _starred_ids(request.user, "starred_academics"),
+        "search_query": request.GET.get("q", "").strip(),
+        "form": AcademicForm() if can_manage(request.user) else None,
     }
 
     return render(request, "academics.html", context)
@@ -97,25 +92,37 @@ def get_projects_json(request):
     return JsonResponse(data, safe=False)
 
 def get_academics_json(request):
-    academics = Academic.objects.all()
-    academics_json = serializers.serialize("json", academics, fields=ACADEMIC_JSON_FIELDS, use_natural_foreign_keys=True)
-    return HttpResponse(academics_json, content_type="application/json")
+    query = request.GET.get("q", "").strip()
+    academics = Academic.objects.annotate(star_count=Count("starred_by")).order_by("start_year")
+    if query:
+        academics = academics.filter(institution__icontains=query)
+    starred_ids = _starred_ids(request.user, "starred_academics")
 
-@role_required(can_manage)
-def create_academic(request):
-    form = AcademicForm(request.POST or None)
+    data = [{
+        "pk": str(a.id),
+        "fields": {
+            "institution": a.institution,
+            "level": a.level,
+            "level_display": a.get_level_display(),
+            "start_year": a.start_year,
+            "end_year": a.end_year,
+            "period": a.period,
+            "star_count": a.star_count,
+            "is_starred": a.id in starred_ids,
+        },
+    } for a in academics]
+    return JsonResponse(data, safe=False)
 
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Riwayat akademik berhasil ditambahkan!")
-        return redirect("main:show_academics")
+@require_POST
+def create_academic_ajax(request):
+    if not can_manage(request.user):
+        return JsonResponse({"message": "Hanya pemilik portofolio yang dapat menambahkan riwayat akademik."}, status=403)
 
-    context = {
-        "name": OWNER_NAME,
-        "form": form,
-        "is_edit": False,
-    }
-    return render(request, "academics_form.html", context)
+    form = AcademicForm(request.POST)
+    if form.is_valid():
+        academic = form.save()
+        return JsonResponse({"message": "Riwayat akademik berhasil ditambahkan.", "pk": str(academic.id)}, status=201)
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 @role_required(can_edit)
 def update_academic(request, academic_id):
@@ -260,5 +267,11 @@ def _toggle_star(user, obj):
 @login_required
 @require_POST
 def toggle_academic_star(request, academic_id):
-    _toggle_star(request.user, get_object_or_404(Academic, pk=academic_id))
+    academic = get_object_or_404(Academic, pk=academic_id)
+    _toggle_star(request.user, academic)
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({
+            "is_starred": academic.starred_by.filter(pk=request.user.pk).exists(),
+            "star_count": academic.starred_by.count(),
+        })
     return redirect("main:show_academics")
