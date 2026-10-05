@@ -90,3 +90,16 @@ class AcademicForm(ModelForm):
                 attrs={"placeholder": "Kosongkan jika masih berlangsung"}
             ),
         }
+
+    def clean_institution(self):
+        institution = strip_tags(self.cleaned_data["institution"]).strip()
+        if not institution:
+            raise ValidationError("Nama institusi tidak boleh hanya berisi tag HTML.")
+        return institution
+
+    def clean(self):
+        cleaned = super().clean()
+        start, end = cleaned.get("start_year"), cleaned.get("end_year")
+        if start and end and end < start:
+            self.add_error("end_year", "Tahun selesai tidak boleh lebih awal dari tahun mulai.")
+        return cleaned
