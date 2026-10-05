@@ -1,0 +1,70 @@
+<div id="add-academic-modal"
+     class="project-form-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="add-academic-modal-title">
+
+    <button type="button"
+            class="project-form-modal__backdrop"
+            popovertarget="add-academic-modal"
+            popovertargetaction="hide"
+            aria-label="Tutup form tambah riwayat akademik">
+    </button>
+
+    <div class="project-form-modal__content">
+
+        <button type="button"
+                class="project-form-modal__close"
+                popovertarget="add-academic-modal"
+                popovertargetaction="hide"
+                aria-label="Tutup form tambah riwayat akademik">
+            ×
+        </button>
+
+        <h2 id="add-academic-modal-title">
+            Tambah Riwayat Akademik
+        </h2>
+
+        <form id="academic-form"
+              method="post"
+              action="{% url 'main:create_academic_ajax' %}"
+              class="project-form">
+
+            {% csrf_token %}
+
+            {% for field in form %}
+                <div class="form-group">
+
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+
+                    {{ field }}
+
+                    <p class="form-error field-error"
+                       data-error-for="{{ field.name }}">
+                    </p>
+
+                </div>
+            {% endfor %}
+
+            <div class="project-form-modal__actions">
+
+                <button type="button"
+                        class="button button-secondary"
+                        popovertarget="add-academic-modal"
+                        popovertargetaction="hide">
+                    Batal
+                </button>
+
+                <button type="submit"
+                        class="button">
+                    Tambah Riwayat
+                </button>
+
+            </div>
+
+        </form>
+    </div>
+</div>

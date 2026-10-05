@@ -1,47 +1,112 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block meta %}
     <title>Academics - {{ name }}</title>
 {% endblock meta %}
 {% block content %}
-    <main>
+
+<main>
+
     <section class="academics-section" id="academics">
+
         <div class="container">
-            <p class="section-kicker">Riwayat pendidikan saya</p>
+
+            <p class="section-kicker">
+                Riwayat pendidikan saya
+            </p>
+
             <h1>Academics</h1>
+
             {% if can_manage %}
-            <a href="{% url 'main:create_academic' %}" class="button">Tambah Riwayat</a>
+                <button type="button"
+                        class="button project-add-button"
+                        popovertarget="add-academic-modal">
+
+                    <span aria-hidden="true">+</span>
+                    Tambah Riwayat
+
+                </button>
             {% endif %}
-            <div class="academics-timeline">
-                {% for academic in academic_list %}
-                    <article class="academic-item">
-                        <span class="academic-level">{{ academic.get_level_display }}</span>
-                        <h2>{{ academic.institution }}</h2>
-                        <p class="academic-period">{{ academic.period }}</p>
 
-                        {% url 'main:toggle_academic_star' academic.id as star_url %}
-                        {% include "components/star_button.html" with obj=academic star_url=star_url %}
+            <form id="academic-search-form"
+                  class="project-search">
 
-                        {% if can_edit %}
-                        <div class="project-actions">
-                            <a href="{% url 'main:update_academic' academic.id %}" class="button button-secondary">Edit</a>
-                            {% if can_manage %}
-                            <form method="post"
-                                  action="{% url 'main:delete_academic' academic.id %}"
-                                  onsubmit="return confirm('Hapus riwayat {{ academic.institution }}?');">
-                                {% csrf_token %}
-                                <button type="submit" class="button button-danger">Hapus</button>
-                            </form>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </article>
-                {% empty %}
-                    <p class="empty-state">
-                        Belum ada riwayat akademik yang ditambahkan.
-                    </p>
-                {% endfor %}
+                <input type="search"
+                       id="academic-search-input"
+                       name="q"
+                       value="{{ search_query }}"
+                       placeholder="Cari berdasarkan nama institusi"
+                       class="project-search__input"
+                       aria-label="Cari berdasarkan nama institusi">
+
+                <button type="submit"
+                        class="button">
+                    Cari
+                </button>
+
+            </form>
+
+
+            <!-- Loading -->
+            <div id="academics-loading"
+                 class="empty-state hide">
+
+                <p>Memuat riwayat akademik...</p>
+
+            </div>
+
+
+            <!-- Error -->
+            <div id="academics-error"
+                 class="empty-state hide">
+
+                <p>
+                    Gagal memuat data akademik.
+                    Silakan coba lagi.
+                </p>
+
+            </div>
+
+
+            <!-- Empty -->
+            <div id="academics-empty"
+                 class="empty-state hide">
+
+                <p>
+                    Belum ada riwayat akademik
+                    yang ditambahkan atau ditemukan.
+                </p>
+            </div>
+
+            <!-- Data akan dibuat JavaScript -->
+            <div id="academics-list"
+                 class="academics-timeline hide">
             </div>
         </div>
+
     </section>
+
 </main>
+
+
+<div id="academics-app"
+     data-list-url="{% url 'main:get_academics_json' %}"
+     data-create-url="{% url 'main:create_academic_ajax' %}"
+     data-star-url-template="{% url 'main:toggle_academic_star' '00000000-0000-0000-0000-000000000000' %}"
+     data-edit-url-template="{% url 'main:update_academic' '00000000-0000-0000-0000-000000000000' %}"
+     data-delete-url-template="{% url 'main:delete_academic' '00000000-0000-0000-0000-000000000000' %}"
+     data-login-url="{% url 'main:login' %}"
+     data-can-manage="{{ can_manage|yesno:'true,false' }}"
+     data-can-edit="{{ can_edit|yesno:'true,false' }}"
+     data-is-authenticated="{{ user.is_authenticated|yesno:'true,false' }}">
+</div>
+
+
+{% if can_manage %}
+    {% include "components/academic_form_modal.html" %}
+{% endif %}
+
+
+<script src="{% static 'js/academics.js' %}" defer></script>
+
 {% endblock content %}
