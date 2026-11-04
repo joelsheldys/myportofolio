@@ -72,14 +72,24 @@ class AcademicsTest(TestCase):
 
     def test_academics_page_shows_data(self):
         response = self.client.get(reverse("main:show_academics"))
-        self.assertContains(response, self.academic.institution)
-        self.assertContains(response, "Perguruan Tinggi")
-        self.assertContains(response, "2025 - Sekarang")
+        self.assertContains(response, 'id="academics-list"')
+
+        data_response = self.client.get(reverse("main:get_academics_json"))
+        self.assertEqual(data_response.status_code, 200)
+        self.assertEqual(
+            data_response.json()[0]["fields"]["institution"],
+            self.academic.institution,
+        )
+        self.assertEqual(data_response.json()[0]["fields"]["level_display"], "Perguruan Tinggi")
+        self.assertEqual(data_response.json()[0]["fields"]["period"], "2025 - Sekarang")
 
     def test_empty_academics_page(self):
         Academic.objects.all().delete()
         response = self.client.get(reverse("main:show_academics"))
-        self.assertContains(response, "Belum ada riwayat akademik yang ditambahkan.")
+        self.assertContains(response, "academics-empty")
+
+        data_response = self.client.get(reverse("main:get_academics_json"))
+        self.assertEqual(data_response.json(), [])
 
     def test_academic_model(self):
         self.assertEqual(str(self.academic), "Universitas Indonesia")
