@@ -1,5 +1,5 @@
-from django.db.models import Count
 from django.shortcuts import get_object_or_404
+from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import (
     api_view,
@@ -74,7 +74,7 @@ def project_star(request, project_id):
     return Response(serializer.data)
 
 
-@api_view(["GET", "POST"])
+@api_view(["GET", "HEAD", "POST"])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsPortfolioOwnerOrEditorOrReadOnly])
 def academic_list(request):
@@ -82,10 +82,10 @@ def academic_list(request):
         serializer = AcademicSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data, status=201)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    academics = Academic.objects.annotate(star_count=Count("starred_by")).order_by(
-        "start_year"
+    academics = Academic.objects.prefetch_related("starred_by").order_by(
+        "start_year", "institution", "id"
     )
     query = request.query_params.get("q", "").strip()
     if query:
@@ -96,16 +96,16 @@ def academic_list(request):
     return Response(serializer.data)
 
 
-@api_view(["GET", "PUT", "PATCH", "DELETE"])
+@api_view(["GET", "HEAD", "PUT", "PATCH", "DELETE"])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsPortfolioOwnerOrEditorOrReadOnly])
 def academic_detail(request, academic_id):
     academic = get_object_or_404(Academic, pk=academic_id)
     if request.method == "DELETE":
         academic.delete()
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-    if request.method == "GET":
+    if request.method in ("GET", "HEAD"):
         serializer = AcademicSerializer(academic, context={"request": request})
         return Response(serializer.data)
 
@@ -129,9 +129,5 @@ def academic_star(request, academic_id):
         academic.starred_by.remove(request.user)
     else:
         academic.starred_by.add(request.user)
-    return Response(
-        {
-            "is_starred": academic.starred_by.filter(pk=request.user.pk).exists(),
-            "star_count": academic.starred_by.count(),
-        }
-    )
+    serializer = AcademicSerializer(academic, context={"request": request})
+    return Response(serializer.data)

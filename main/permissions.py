@@ -48,7 +48,4 @@ class IsPortfolioOwnerOrEditorOrReadOnly(BasePermission):
             return False
         if request.user.is_superuser:
             return True
-        return (
-            request.method in ("PUT", "PATCH")
-            and request.user.groups.filter(name=EDITOR_GROUP).exists()
-        )
+        return request.method in ("PUT", "PATCH") and is_editor(request.user)

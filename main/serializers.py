@@ -66,6 +66,9 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 
 class AcademicSerializer(serializers.ModelSerializer):
+    MIN_YEAR = 1900
+    MAX_YEAR = 2100
+
     level_display = serializers.CharField(source="get_level_display", read_only=True)
     period = serializers.CharField(read_only=True)
     star_count = serializers.SerializerMethodField()
@@ -100,6 +103,19 @@ class AcademicSerializer(serializers.ModelSerializer):
             )
         return institution
 
+    def validate_start_year(self, value):
+        return self._validate_year(value)
+
+    def validate_end_year(self, value):
+        return value if value is None else self._validate_year(value)
+
+    def _validate_year(self, value):
+        if not self.MIN_YEAR <= value <= self.MAX_YEAR:
+            raise serializers.ValidationError(
+                f"Tahun harus berada di antara {self.MIN_YEAR} dan {self.MAX_YEAR}."
+            )
+        return value
+
     def validate(self, attrs):
         start_year = attrs.get(
             "start_year",
@@ -116,12 +132,10 @@ class AcademicSerializer(serializers.ModelSerializer):
         return attrs
 
     def get_star_count(self, obj):
-        return obj.starred_by.count()
+        return len(obj.starred_by.all())
 
     def get_is_starred(self, obj):
         request = self.context.get("request")
-        return bool(
-            request
-            and request.user.is_authenticated
-            and obj.starred_by.filter(pk=request.user.pk).exists()
-        )
+        if not (request and request.user.is_authenticated):
+            return False
+        return any(user.pk == request.user.pk for user in obj.starred_by.all())
