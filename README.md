@@ -65,3 +65,40 @@ XSS (Cross-Site Scripting) adalah serangan dengan cara menyisipkan kode atau scr
 ### AI Disclosure
 
 Dalam pengerjaan Tugas 5, saya menggunakan ChatGPT sebagai alat bantu untuk memahami instruksi tugas, mencari alternatif implementasi AJAX dan JavaScript, serta membantu menjelaskan error yang muncul selama proses pengembangan. Saya tetap melakukan implementasi, pengujian, dan penyesuaian kode secara manual pada project saya agar sesuai dengan struktur dan kebutuhan website portfolio yang saya kerjakan. Setelah menggunakan saran dari AI, saya memeriksa kembali kode, menjalankan aplikasi, serta melakukan debugging dan perbaikan terhadap bagian yang belum sesuai.
+
+### Tugas 6
+
+1. Jelaskan apa yang dimaksud dengan REST dan mengapa mengembalikan JSON saja belum
+cukup untuk menyebut sebuah API sebagai RESTful! Jelaskan pula perbedaan PUT dan PATCH
+beserta contoh kapan masing-masing sebaiknya digunakan!
+
+REST adalah gaya arsitektur untuk API yang mengatur cara client dan server berkomunikasi melalui resource—misalnya data akademik—dengan antarmuka yang konsisten. Prinsipnya mencakup pemisahan client-server, komunikasi stateless, resource yang memiliki alamat, serta penggunaan metode HTTP sesuai maknanya. API dapat mengirim JSON tetapi belum tentu RESTful: format JSON hanya menentukan bentuk data, bukan cara resource diidentifikasi atau bagaimana operasi dan status HTTP digunakan.
+
+PUT biasanya digunakan untuk mengganti keseluruhan representasi resource. Contohnya, mengganti semua data sebuah riwayat akademik; field wajib yang tidak disertakan dapat menyebabkan permintaan ditolak. PATCH digunakan untuk mengubah sebagian field saja, misalnya hanya memperbarui institution tanpa mengirim ulang field lainnya.
+
+2. Jelaskan peran serializer pada Django REST Framework! Apa keuntungannya dibandingkan
+merakit dictionary secara manual dengan JsonResponse seperti pada Tutorial 05?
+
+Serializer mengubah objek model menjadi data yang dapat dikirim melalui API, seperti JSON, dan memvalidasi serta mengubah input dari client menjadi data yang siap disimpan. Serializer juga menjadi tempat untuk menentukan field yang boleh ditampilkan atau ditulis, termasuk field read-only dan validasi khusus.
+
+Dibandingkan merakit dictionary secara manual dengan JsonResponse, serializer mengurangi kode berulang, menyediakan validasi dan format kesalahan yang konsisten, serta memudahkan pengelolaan field dan relasi. Dengan begitu, representasi dan aturan input tidak perlu dirakit serta diperiksa manual di setiap view.
+
+3. Jelaskan perbedaan autentikasi dan otorisasi pada Django REST Framework! Mengapa hak
+akses harus diperiksa dengan permission class di server, bukan hanya dengan menyembunyikan
+tombol di template?
+
+Autentikasi memastikan identitas pengguna, misalnya dengan memeriksa session login. Otorisasi menentukan tindakan yang boleh dilakukan identitas tersebut, seperti apakah ia boleh mengedit atau menghapus data. Di DRF, permission class dapat menerapkan aturan otorisasi pada endpoint di server.
+
+Menyembunyikan tombol di template hanya mengubah tampilan. Pengguna tetap dapat mengirim permintaan langsung ke endpoint melalui browser atau alat lain. Karena itu, server harus memeriksa izin pada setiap permintaan; kontrol antarmuka hanya membantu menampilkan tombol yang relevan, bukan melindungi data.
+
+4. Jelaskan mengapa permintaan yang mengubah data tetap memerlukan token CSRF ketika API
+memakai SessionAuthentication! Mengapa test yang memakai force_authenticate tidak
+cukup untuk membuktikan bahwa perlindungan CSRF berjalan?
+
+Pada SessionAuthentication, browser mengirim cookie session secara otomatis saat mengakses situs. Karena itu, situs berbahaya berpotensi memicu permintaan yang memakai session korban tanpa sepengetahuan korban. Token CSRF membantu server memeriksa bahwa permintaan yang mengubah data memang berasal dari halaman aplikasi yang memiliki token yang sesuai.
+
+Test dengan force_authenticate tidak cukup untuk menguji perlindungan CSRF karena metode itu memasang pengguna terautentikasi secara langsung dan melewati alur login/session yang perlu diuji. Untuk membuktikan CSRF bekerja, gunakan client dengan enforce_csrf_checks=True, login dengan .login(), lalu pastikan permintaan tanpa token ditolak dan permintaan dengan token diterima.
+
+### AI Disclosure
+
+Dalam pengerjaan Tugas 6, saya menggunakan AI berupa Claude sebagai alat bantu untuk memahami instruksi, mencari alternatif implementasi Django REST Framework, serta membantu menjelaskan kendala yang muncul selama proses pengembangan. Saya meninjau dan menyesuaikan saran yang diberikan agar sesuai dengan struktur dan kebutuhan proyek. Saya juga menguji kembali fitur yang dikerjakan dan melakukan perbaikan apabila ditemukan bagian yang belum sesuai.
