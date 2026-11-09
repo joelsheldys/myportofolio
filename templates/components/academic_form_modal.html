@@ -1,14 +1,13 @@
-<div id="add-academic-modal"
+<div id="academic-form-modal"
      class="project-form-modal"
      popover="auto"
      role="dialog"
      aria-modal="true"
-     aria-labelledby="add-academic-modal-title">
+     aria-labelledby="academic-form-modal-title">
 
     <button type="button"
             class="project-form-modal__backdrop"
-            popovertarget="add-academic-modal"
-            popovertargetaction="hide"
+            data-close-academic-form
             aria-label="Tutup form tambah riwayat akademik">
     </button>
 
@@ -16,22 +15,19 @@
 
         <button type="button"
                 class="project-form-modal__close"
-                popovertarget="add-academic-modal"
-                popovertargetaction="hide"
+                data-close-academic-form
                 aria-label="Tutup form tambah riwayat akademik">
             ×
         </button>
 
-        <h2 id="add-academic-modal-title">
+        <h2 id="academic-form-modal-title">
             Tambah Riwayat Akademik
         </h2>
 
-        <form id="academic-form"
-              method="post"
-              action="{% url 'main:create_academic_ajax' %}"
-              class="project-form">
-
-            {% csrf_token %}
+        <form id="academic-form" class="project-form">
+            <p id="academic-form-general-error"
+               class="form-error"
+               role="alert"></p>
 
             {% for field in form %}
                 <div class="form-group">
@@ -53,13 +49,11 @@
 
                 <button type="button"
                         class="button button-secondary"
-                        popovertarget="add-academic-modal"
-                        popovertargetaction="hide">
+                        data-close-academic-form>
                     Batal
                 </button>
 
-                <button type="submit"
-                        class="button">
+                <button id="academic-form-submit" type="submit" class="button">
                     Tambah Riwayat
                 </button>
 

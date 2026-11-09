@@ -1,0 +1,27 @@
+<div id="academic-delete-modal"
+     class="project-delete-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="academic-delete-modal-title">
+    <button type="button"
+            class="project-delete-modal__backdrop"
+            data-close-academic-delete
+            aria-label="Tutup konfirmasi hapus"></button>
+    <div class="project-delete-modal__content">
+        <button type="button"
+                class="project-delete-modal__close"
+                data-close-academic-delete
+                aria-label="Tutup konfirmasi hapus">×</button>
+        <h2 id="academic-delete-modal-title">Hapus Riwayat Akademik?</h2>
+        <p>Apakah Anda yakin ingin menghapus <strong id="academic-delete-name"></strong>?</p>
+        <div class="project-delete-modal__actions">
+            <button type="button"
+                    class="button button-secondary"
+                    data-close-academic-delete>Batal</button>
+            <button id="academic-delete-confirm"
+                    type="button"
+                    class="button button-danger">Ya, Hapus</button>
+        </div>
+    </div>
+</div>

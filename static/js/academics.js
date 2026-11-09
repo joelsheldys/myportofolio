@@ -1,44 +1,52 @@
 const app = document.getElementById("academics-app");
 
 const LIST_URL = app.dataset.listUrl;
-const CREATE_URL = app.dataset.createUrl;
+const DETAIL_URL_TEMPLATE = app.dataset.detailUrlTemplate;
 const STAR_URL_TEMPLATE = app.dataset.starUrlTemplate;
-const EDIT_URL_TEMPLATE = app.dataset.editUrlTemplate;
-const DELETE_URL_TEMPLATE = app.dataset.deleteUrlTemplate;
 const LOGIN_URL = app.dataset.loginUrl;
-
 const CAN_MANAGE = app.dataset.canManage === "true";
 const CAN_EDIT = app.dataset.canEdit === "true";
-const IS_AUTHENTICATED =
-    app.dataset.isAuthenticated === "true";
+const IS_AUTHENTICATED = app.dataset.isAuthenticated === "true";
 
-const loadingState =
-    document.getElementById("academics-loading");
-
-const errorState =
-    document.getElementById("academics-error");
-
-const emptyState =
-    document.getElementById("academics-empty");
-
-const listContainer =
-    document.getElementById("academics-list");
-
-const searchForm =
-    document.getElementById("academic-search-form");
-
-const searchInput =
-    document.getElementById("academic-search-input");
-
-const academicForm =
-    document.getElementById("academic-form");
-
+const loadingState = document.getElementById("academics-loading");
+const errorState = document.getElementById("academics-error");
+const emptyState = document.getElementById("academics-empty");
+const listContainer = document.getElementById("academics-list");
+const searchForm = document.getElementById("academic-search-form");
+const searchInput = document.getElementById("academic-search-input");
+const academicForm = document.getElementById("academic-form");
+const formModal = document.getElementById("academic-form-modal");
+const formTitle = document.getElementById("academic-form-modal-title");
+const formSubmit = document.getElementById("academic-form-submit");
+const formGeneralError = document.getElementById("academic-form-general-error");
+const deleteModal = document.getElementById("academic-delete-modal");
+const deleteName = document.getElementById("academic-delete-name");
+const deleteConfirm = document.getElementById("academic-delete-confirm");
 
 const SEARCH_DEBOUNCE_DELAY = 300;
+const UUID_PLACEHOLDER = "00000000-0000-0000-0000-000000000000";
 
 let searchDebounceTimer = null;
 let academicsAbortController = null;
+let formAcademic = null;
+let academicToDelete = null;
 
+async function apiRequest(url, { method = "GET", body, signal } = {}) {
+    const headers = { Accept: "application/json" };
+    if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+        headers["X-CSRFToken"] = getCookie("csrftoken") || "";
+    }
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    const response = await fetch(url, {
+        method,
+        headers,
+        signal,
+        credentials: "same-origin",
+        body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const data = response.status === 204 ? null : await response.json().catch(() => null);
+    return { response, data };
+}
 
 function displayPageSection({
     showLoading = false,
@@ -46,643 +54,341 @@ function displayPageSection({
     showEmpty = false,
     showList = false,
 }) {
-    loadingState.classList.toggle(
-        "hide",
-        !showLoading
-    );
-
-    errorState.classList.toggle(
-        "hide",
-        !showError
-    );
-
-    emptyState.classList.toggle(
-        "hide",
-        !showEmpty
-    );
-
-    listContainer.classList.toggle(
-        "hide",
-        !showList
-    );
+    loadingState.classList.toggle("hide", !showLoading);
+    errorState.classList.toggle("hide", !showError);
+    emptyState.classList.toggle("hide", !showEmpty);
+    listContainer.classList.toggle("hide", !showList);
 }
-
 
 function createAcademicUrl(template, academicId) {
-    return template.replace(
-        "00000000-0000-0000-0000-000000000000",
-        academicId
-    );
+    return template.replace(UUID_PLACEHOLDER, academicId);
 }
 
-
-function buildAcademicCard(item) {
-    const academic = item.fields;
-    const academicId = item.pk;
-
+function buildAcademicCard(academic) {
     const article = document.createElement("article");
     article.className = "academic-item";
-
+    article.dataset.academicId = academic.id;
 
     const level = document.createElement("span");
     level.className = "academic-level";
     level.textContent = academic.level_display;
 
-
     const institution = document.createElement("h2");
     institution.textContent = academic.institution;
-
 
     const period = document.createElement("p");
     period.className = "academic-period";
     period.textContent = academic.period;
 
-
     const actions = document.createElement("div");
     actions.className = "project-actions";
 
-
-    // =========================
-    // STAR
-    // =========================
-
     if (IS_AUTHENTICATED) {
-
-        const starForm = document.createElement("form");
-        starForm.method = "post";
-        starForm.className = "star-form";
-
-        starForm.action =
-            createAcademicUrl(
-                STAR_URL_TEMPLATE,
-                academicId
-            );
-
-
-        const starButton =
-            document.createElement("button");
-
-        starButton.type = "submit";
-
-        starButton.className =
-            "button button-star";
-
-        if (academic.is_starred) {
-            starButton.classList.add("is-starred");
-        }
-
-
-        const starIcon =
-            document.createElement("span");
-
-        starIcon.setAttribute(
-            "aria-hidden",
-            "true"
-        );
-
-        starIcon.textContent = "★";
-
-
-        const starCount =
-            document.createElement("span");
-
-        starCount.className = "star-count";
-        starCount.textContent =
-            academic.star_count;
-
-
+        const starButton = document.createElement("button");
+        starButton.type = "button";
+        starButton.className = "button button-star";
+        starButton.classList.toggle("is-starred", academic.is_starred);
         starButton.append(
-            starIcon,
-            document.createTextNode(
-                academic.is_starred
-                    ? "Unstar"
-                    : "Star"
-            ),
-            starCount
+            document.createTextNode(academic.is_starred ? "Unstar " : "Star "),
         );
 
-
-        starForm.appendChild(starButton);
-
-
-        starForm.addEventListener(
-            "submit",
-            async function (event) {
-
-                event.preventDefault();
-
-                try {
-
-                    const response = await fetch(
-                        starForm.action,
-                        {
-                            method: "POST",
-                            headers: {
-                                "X-CSRFToken":
-                                    getCookie("csrftoken"),
-
-                                "X-Requested-With":
-                                    "XMLHttpRequest",
-
-                                "Accept":
-                                    "application/json",
-                            },
-                        }
-                    );
-
-
-                    if (!response.ok) {
-                        throw new Error(
-                            "Gagal mengubah star."
-                        );
-                    }
-
-
-                    const result =
-                        await response.json();
-
-
-                    academic.is_starred =
-                        result.is_starred;
-
-                    academic.star_count =
-                        result.star_count;
-
-
-                    starButton.classList.toggle(
-                        "is-starred",
-                        result.is_starred
-                    );
-
-
-                    starButton.replaceChildren(
-                        starIcon,
-                        document.createTextNode(
-                            result.is_starred
-                                ? "Unstar"
-                                : "Star"
-                        ),
-                        starCount
-                    );
-
-
-                    starCount.textContent =
-                        result.star_count;
-
-                } catch (error) {
-
-                    console.error(
-                        error
-                    );
-
-                    showToast(
-                        "Gagal",
-                        "Tidak dapat mengubah star.",
-                        "error"
-                    );
-                }
-            }
-        );
-
-
-        actions.appendChild(starForm);
-
-    } else {
-
-        const loginLink =
-            document.createElement("a");
-
-        loginLink.className =
-            "button button-star";
-
-        loginLink.href =
-            `${LOGIN_URL}?next=${encodeURIComponent(
-                window.location.pathname +
-                window.location.search
-            )}`;
-
-        loginLink.textContent =
-            "★ Login untuk star ";
-
-        const starCount =
-            document.createElement("span");
-
+        const starCount = document.createElement("span");
         starCount.className = "star-count";
-        starCount.textContent =
-            academic.star_count;
+        starCount.textContent = String(academic.star_count);
+        starButton.appendChild(starCount);
+        starButton.addEventListener("click", () => toggleStar(article, academic));
+        actions.appendChild(starButton);
+    } else {
+        const loginLink = document.createElement("a");
+        const next = window.location.pathname + window.location.search;
+        const loginQuery = new URLSearchParams({ next });
+        loginLink.className = "button button-star";
+        loginLink.href = `${LOGIN_URL}?${loginQuery.toString()}`;
+        loginLink.textContent = "★ Login untuk star ";
 
+        const starCount = document.createElement("span");
+        starCount.className = "star-count";
+        starCount.textContent = String(academic.star_count);
         loginLink.appendChild(starCount);
-
         actions.appendChild(loginLink);
     }
 
-
-    // =========================
-    // EDIT
-    // =========================
-
     if (CAN_EDIT) {
-
-        const editLink =
-            document.createElement("a");
-
-        editLink.className =
-            "button button-secondary";
-
-        editLink.href =
-            createAcademicUrl(
-                EDIT_URL_TEMPLATE,
-                academicId
-            );
-
-        editLink.textContent = "Edit";
-
-        actions.appendChild(editLink);
+        const editButton = document.createElement("button");
+        editButton.type = "button";
+        editButton.className = "button button-secondary";
+        editButton.textContent = "Edit";
+        editButton.addEventListener("click", () => openFormModal(academic));
+        actions.appendChild(editButton);
     }
-
-
-    // =========================
-    // DELETE
-    // =========================
 
     if (CAN_MANAGE) {
-
-        const deleteForm =
-            document.createElement("form");
-
-        deleteForm.method = "post";
-
-        deleteForm.action =
-            createAcademicUrl(
-                DELETE_URL_TEMPLATE,
-                academicId
-            );
-
-
-        const csrfInput =
-            document.createElement("input");
-
-        csrfInput.type = "hidden";
-        csrfInput.name =
-            "csrfmiddlewaretoken";
-
-        csrfInput.value =
-            getCookie("csrftoken");
-
-
-        const deleteButton =
-            document.createElement("button");
-
-        deleteButton.type = "submit";
-
-        deleteButton.className =
-            "button button-danger";
-
-        deleteButton.textContent =
-            "Hapus";
-
-
-        deleteForm.addEventListener(
-            "submit",
-            function (event) {
-
-                const confirmed = confirm(
-                    `Hapus riwayat ${academic.institution}?`
-                );
-
-                if (!confirmed) {
-                    event.preventDefault();
-                }
-            }
-        );
-
-
-        deleteForm.append(
-            csrfInput,
-            deleteButton
-        );
-
-        actions.appendChild(deleteForm);
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "button button-danger";
+        deleteButton.textContent = "Hapus";
+        deleteButton.addEventListener("click", () => openDeleteModal(academic));
+        actions.appendChild(deleteButton);
     }
 
-
-    article.append(
-        level,
-        institution,
-        period,
-        actions
-    );
-
+    article.append(level, institution, period, actions);
     return article;
 }
 
+function parseApiError(data, status) {
+    const fieldErrors = {};
+    const generalMessages = [];
 
-async function fetchAcademics(query = "") {
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+        for (const [field, value] of Object.entries(data)) {
+            const values = Array.isArray(value) ? value : [value];
+            const message = values
+                .filter((item) => typeof item === "string")
+                .join(" ");
+            if (!message) continue;
 
-    if (academicsAbortController) {
-        academicsAbortController.abort();
+            if (field === "detail" || field === "non_field_errors") {
+                generalMessages.push(message);
+            } else {
+                fieldErrors[field] = message;
+            }
+        }
     }
 
-    academicsAbortController =
-        new AbortController();
+    const message = [
+        ...Object.values(fieldErrors),
+        ...generalMessages,
+    ].join(" ") || `Permintaan gagal (HTTP ${status}).`;
 
+    return {
+        fieldErrors,
+        generalMessage: generalMessages.join(" "),
+        message,
+    };
+}
 
-    displayPageSection({
-        showLoading: true,
+function toastApiError(response, data) {
+    const titles = {
+        400: "Data tidak valid",
+        403: "Akses ditolak",
+        404: "Data tidak ditemukan",
+    };
+    const parsedError = parseApiError(data, response.status);
+    showToast(
+        titles[response.status] || "Permintaan gagal",
+        parsedError.message,
+        "error",
+    );
+    return parsedError;
+}
+
+function showNetworkError() {
+    showToast("Gagal", "Tidak dapat terhubung ke server.", "error");
+}
+
+function clearFormErrors() {
+    formGeneralError.textContent = "";
+    academicForm.querySelectorAll("[data-error-for]").forEach((errorElement) => {
+        errorElement.textContent = "";
     });
+}
 
+function displayFormErrors(parsedError) {
+    clearFormErrors();
+    formGeneralError.textContent = parsedError.generalMessage;
+
+    for (const [field, message] of Object.entries(parsedError.fieldErrors)) {
+        const errorElement = academicForm.querySelector(
+            `[data-error-for="${CSS.escape(field)}"]`,
+        );
+        if (errorElement) errorElement.textContent = message;
+    }
+}
+
+async function fetchAcademics(query = "", { silent = false } = {}) {
+    if (academicsAbortController) academicsAbortController.abort();
+
+    const controller = new AbortController();
+    academicsAbortController = controller;
+    if (!silent) displayPageSection({ showLoading: true });
+
+    const url = new URL(LIST_URL, document.baseURI);
+    url.searchParams.set("q", query);
 
     try {
-
-        const url = query
-            ? `${LIST_URL}?q=${encodeURIComponent(query)}`
-            : LIST_URL;
-
-
-        const response = await fetch(
-            url,
-            {
-                headers: {
-                    "Accept":
-                        "application/json",
-                },
-
-                signal:
-                    academicsAbortController.signal,
-            }
-        );
-
+        const { response, data } = await apiRequest(url, { signal: controller.signal });
+        if (controller !== academicsAbortController) return;
 
         if (!response.ok) {
-            throw new Error(
-                "Gagal mengambil data."
-            );
+            toastApiError(response, data);
+            displayPageSection({ showError: true });
+            return;
         }
-
-
-        const data =
-            await response.json();
-
 
         listContainer.replaceChildren();
-
-
         if (data.length === 0) {
-
-            displayPageSection({
-                showEmpty: true,
-            });
-
+            displayPageSection({ showEmpty: true });
             return;
         }
 
-
-        data.forEach(function (item) {
-
-            listContainer.appendChild(
-                buildAcademicCard(item)
-            );
-
+        data.forEach((academic) => {
+            listContainer.appendChild(buildAcademicCard(academic));
         });
-
-
-        displayPageSection({
-            showList: true,
-        });
-
+        displayPageSection({ showList: true });
     } catch (error) {
+        if (error.name === "AbortError") return;
+        if (controller !== academicsAbortController) return;
+        console.error(error);
+        displayPageSection({ showError: true });
+        showNetworkError();
+    }
+}
 
-        if (error.name === "AbortError") {
+async function toggleStar(card, academic) {
+    try {
+        const url = createAcademicUrl(STAR_URL_TEMPLATE, academic.id);
+        const { response, data } = await apiRequest(url, { method: "POST" });
+        if (!response.ok) {
+            toastApiError(response, data);
+            return;
+        }
+        card.replaceWith(buildAcademicCard(data));
+    } catch (error) {
+        console.error(error);
+        showNetworkError();
+    }
+}
+
+function setAcademicFormValue(name, value) {
+    const field = academicForm.elements.namedItem(name);
+    if (field) field.value = value === null || value === undefined ? "" : String(value);
+}
+
+function openFormModal(academic = null) {
+    if (!academicForm || !formModal) return;
+
+    formAcademic = academic;
+    academicForm.reset();
+    clearFormErrors();
+
+    if (academic) {
+        formTitle.textContent = "Ubah Riwayat Akademik";
+        formSubmit.textContent = "Simpan Perubahan";
+        setAcademicFormValue("institution", academic.institution);
+        setAcademicFormValue("level", academic.level);
+        setAcademicFormValue("start_year", academic.start_year);
+        setAcademicFormValue("end_year", academic.end_year);
+    } else {
+        formTitle.textContent = "Tambah Riwayat Akademik";
+        formSubmit.textContent = "Tambah Riwayat";
+    }
+
+    formModal.showPopover();
+}
+
+async function submitAcademicForm(event) {
+    event.preventDefault();
+    clearFormErrors();
+
+    const formData = new FormData(academicForm);
+    const endYear = formData.get("end_year");
+    const body = {
+        institution: formData.get("institution"),
+        level: formData.get("level"),
+        start_year: Number(formData.get("start_year")),
+        end_year: endYear === "" ? null : Number(endYear),
+    };
+    const url = formAcademic
+        ? createAcademicUrl(DETAIL_URL_TEMPLATE, formAcademic.id)
+        : LIST_URL;
+    const method = formAcademic ? "PATCH" : "POST";
+
+    formSubmit.disabled = true;
+    try {
+        const { response, data } = await apiRequest(url, { method, body });
+        if (!response.ok) {
+            const parsedError = toastApiError(response, data);
+            if (response.status === 400) displayFormErrors(parsedError);
             return;
         }
 
+        formModal.hidePopover();
+        showToast(
+            "Berhasil",
+            formAcademic
+                ? "Riwayat akademik berhasil diperbarui."
+                : "Riwayat akademik berhasil ditambahkan.",
+            "success",
+        );
+        await fetchAcademics(searchInput.value.trim(), { silent: true });
+    } catch (error) {
         console.error(error);
-
-        displayPageSection({
-            showError: true,
-        });
+        showNetworkError();
+    } finally {
+        formSubmit.disabled = false;
     }
 }
 
+function openDeleteModal(academic) {
+    if (!deleteModal) return;
+    academicToDelete = academic;
+    deleteName.textContent = academic.institution;
+    deleteModal.showPopover();
+}
 
-// =========================
-// SEARCH
-// =========================
+async function confirmDelete() {
+    if (!academicToDelete) return;
 
-searchInput.addEventListener(
-    "input",
-    function () {
-
-        clearTimeout(
-            searchDebounceTimer
-        );
-
-        searchDebounceTimer =
-            setTimeout(
-                function () {
-
-                    fetchAcademics(
-                        searchInput.value.trim()
-                    );
-
-                },
-                SEARCH_DEBOUNCE_DELAY
-            );
-    }
-);
-
-
-searchForm.addEventListener(
-    "submit",
-    function (event) {
-
-        event.preventDefault();
-
-        clearTimeout(
-            searchDebounceTimer
-        );
-
-        fetchAcademics(
-            searchInput.value.trim()
-        );
-    }
-);
-
-
-// =========================
-// ADD ACADEMIC
-// =========================
-
-if (academicForm) {
-
-    academicForm.addEventListener(
-        "submit",
-        async function (event) {
-
-            event.preventDefault();
-
-
-            const submitButton =
-                academicForm.querySelector(
-                    'button[type="submit"]'
-                );
-
-            submitButton.disabled = true;
-
-
-            document
-                .querySelectorAll(".field-error")
-                .forEach(function (element) {
-                    element.textContent = "";
-                });
-
-
-            try {
-
-                const response =
-                    await fetch(
-                        CREATE_URL,
-                        {
-                            method: "POST",
-
-                            headers: {
-                                "X-CSRFToken":
-                                    getCookie("csrftoken"),
-
-                                "X-Requested-With":
-                                    "XMLHttpRequest",
-
-                                "Accept":
-                                    "application/json",
-                            },
-
-                            body:
-                                new FormData(
-                                    academicForm
-                                ),
-                        }
-                    );
-
-
-                const result =
-                    await response.json()
-                        .catch(() => ({}));
-
-
-                if (response.status === 201) {
-
-                    academicForm.reset();
-
-
-                    const modal =
-                        document.getElementById(
-                            "add-academic-modal"
-                        );
-
-                    modal.hidePopover();
-
-
-                    showToast(
-                        "Berhasil",
-                        "Riwayat akademik berhasil ditambahkan.",
-                        "success"
-                    );
-
-
-                    fetchAcademics(
-                        searchInput.value.trim()
-                    );
-
-                    return;
-                }
-
-
-                if (response.status === 400) {
-
-                    if (result.errors) {
-
-                        Object.entries(
-                            result.errors
-                        ).forEach(
-                            function ([fieldName, errors]) {
-
-                                const errorElement =
-                                    document.querySelector(
-                                        `[data-error-for="${fieldName}"]`
-                                    );
-
-                                if (!errorElement) {
-                                    return;
-                                }
-
-                                errorElement.textContent =
-                                    errors
-                                        .map(
-                                            error =>
-                                                error.message
-                                        )
-                                        .join(" ");
-
-                            }
-                        );
-                    }
-
-
-                    const messages =
-                        result.errors
-                            ? Object.values(
-                                result.errors
-                            )
-                                .flat()
-                                .map(
-                                    error =>
-                                        error.message
-                                )
-                            : [
-                                "Data tidak valid."
-                            ];
-
-
-                    showToast(
-                        "Gagal",
-                        messages.join(" "),
-                        "error"
-                    );
-
-                    return;
-                }
-
-
-                showToast(
-                    "Gagal",
-                    result.message ||
-                        `Terjadi kesalahan (${response.status}).`,
-                    "error"
-                );
-
-            } catch (error) {
-
-                console.error(error);
-
-                showToast(
-                    "Gagal",
-                    "Tidak dapat terhubung ke server.",
-                    "error"
-                );
-
-            } finally {
-
-                submitButton.disabled = false;
-            }
+    deleteConfirm.disabled = true;
+    try {
+        const url = createAcademicUrl(DETAIL_URL_TEMPLATE, academicToDelete.id);
+        const { response, data } = await apiRequest(url, { method: "DELETE" });
+        if (response.status !== 204) {
+            toastApiError(response, data);
+            return;
         }
-    );
+
+        deleteModal.hidePopover();
+        academicToDelete = null;
+        showToast("Berhasil", "Riwayat akademik berhasil dihapus.", "success");
+        await fetchAcademics(searchInput.value.trim(), { silent: true });
+    } catch (error) {
+        console.error(error);
+        showNetworkError();
+    } finally {
+        deleteConfirm.disabled = false;
+    }
 }
 
+document.getElementById("academic-add-button")?.addEventListener("click", () => {
+    openFormModal();
+});
 
-// =========================
-// START
-// =========================
+document.querySelectorAll("[data-close-academic-form]").forEach((button) => {
+    button.addEventListener("click", () => formModal.hidePopover());
+});
 
-fetchAcademics(
-    searchInput.value.trim()
-);
+document.querySelectorAll("[data-close-academic-delete]").forEach((button) => {
+    button.addEventListener("click", () => {
+        deleteModal.hidePopover();
+        academicToDelete = null;
+    });
+});
+
+if (academicForm) academicForm.addEventListener("submit", submitAcademicForm);
+if (deleteConfirm) deleteConfirm.addEventListener("click", confirmDelete);
+
+searchInput.addEventListener("input", () => {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+        fetchAcademics(searchInput.value.trim());
+    }, SEARCH_DEBOUNCE_DELAY);
+});
+
+searchForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    clearTimeout(searchDebounceTimer);
+    fetchAcademics(searchInput.value.trim());
+});
+
+fetchAcademics(searchInput.value.trim());
